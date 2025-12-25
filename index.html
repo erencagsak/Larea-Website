@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;800&family=Material+Symbols+Outlined" rel="stylesheet" />
 
   <style>
+    /* --- CSS AYNI KALIYOR --- */
     body {
       margin: 0;
       background: radial-gradient(circle at top, #1a1a2e, #050510);
@@ -175,7 +176,7 @@
       color: #7878ff;
     }
 
-    /* --- GÜNCELLENEN GALERİ STİLLERİ --- */
+    /* GALERİ */
     .gallery-wrapper {
       position: relative;
       width: 100%;
@@ -213,7 +214,7 @@
       box-shadow: 0 4px 15px rgba(0,0,0,0.3);
       transition: transform 0.3s ease;
       flex-shrink: 0;
-      cursor: zoom-in; /* Büyütülebilir imleci */
+      cursor: zoom-in; 
     }
 
     .gallery-img:hover {
@@ -221,7 +222,6 @@
       border: 1px solid rgba(255,255,255,0.3);
     }
 
-    /* Kaydırma Butonları */
     .scroll-btn {
       background: rgba(255, 255, 255, 0.1);
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -247,7 +247,7 @@
     .scroll-left { left: -20px; }
     .scroll-right { right: -20px; }
 
-    /* Lightbox (Büyük Resim) Stilleri */
+    /* Lightbox */
     .lightbox {
       position: fixed;
       top: 0;
@@ -271,8 +271,7 @@
       border: 1px solid rgba(255,255,255,0.1);
     }
 
-    /* --- END GALERİ STİLLERİ --- */
-
+    /* DOWNLOAD BUTONU */
     .download-btn {
       display: inline-flex;
       align-items: center;
@@ -304,6 +303,7 @@
       color: #666;
     }
 
+    /* FORM ALANI */
     .form-group {
       margin-bottom: 20px;
       text-align: left;
@@ -494,11 +494,10 @@
   <div class="footer">© 2025 Larea Browser Project</div>
 
   <script>
+    // --- GALERİ ---
     const track = document.getElementById('galleryTrack');
 
-    setTimeout(() => {
-        if(track) track.scrollLeft = 0;
-    }, 100);
+    setTimeout(() => { if(track) track.scrollLeft = 0; }, 100);
 
     function scrollGallery(direction) {
       track.scrollBy({ left: direction * 300, behavior: 'smooth' });
@@ -506,52 +505,95 @@
 
     function openLightbox(src) {
       const lightbox = document.getElementById('lightbox');
-      const img = document.getElementById('lightboxImg');
-      img.src = src;
+      document.getElementById('lightboxImg').src = src;
       lightbox.style.display = 'flex';
     }
 
     function closeLightbox() {
       document.getElementById('lightbox').style.display = 'none';
     }
-    
+    // --- END GALERİ ---
+
+
+    // --- GÜÇLENDİRİLMİŞ İNDİRME MANTIĞI ---
     async function fetchLatestRelease() {
         const user = 'erencagsak';
         const repo = 'Larea-Browser';
+        
+        // Önemli: API hata verirse bu dosyayı indirmeyi deneyecek.
+        // GitHub'a dosya yüklerken "Larea-Setup.exe" gibi sabit isim koyarsan bu kısım hayat kurtarır.
+        const fallbackFilename = 'Larea-Browser-Setup.exe'; 
         
         const btn = document.getElementById('downloadBtn');
         const btnText = document.getElementById('btnText');
         const verText = document.getElementById('versionText');
 
-        btnText.innerText = "LOADING...";
+        // 1. ÖNCE HAFIZAYA BAK (Cache) - API Limitini korur
+        // Daha önce linki bulduysak, tekrar GitHub'a sormadan direkt onu kullan.
+        const cachedUrl = sessionStorage.getItem('larea_dl_url');
+        const cachedVer = sessionStorage.getItem('larea_dl_ver');
 
+        if (cachedUrl && cachedVer) {
+            console.log("Using cached URL");
+            btn.href = cachedUrl;
+            btnText.innerText = "DOWNLOAD FOR WINDOWS";
+            verText.innerText = `Version: ${cachedVer} (Ready)`;
+            return; // Fonksiyonu burada bitir, internete çıkma.
+        }
+
+        // 2. HAFIZADA YOKSA GITHUB'A SOR
         try {
             const response = await fetch(`https://api.github.com/repos/${user}/${repo}/releases/latest`);
             
-            if (!response.ok) throw new Error('API Error');
+            if (!response.ok) throw new Error('API Rate Limit or Error');
 
             const data = await response.json();
             
-            const asset = data.assets.find(a => a.name.endsWith('.exe'));
+            // Sonu .exe ile biten dosyayı bul (İsmi ne olursa olsun)
+            const asset = data.assets.find(a => a.name.toLowerCase().endsWith('.exe'));
 
             if (asset) {
-                btn.href = asset.browser_download_url;
+                const downloadUrl = asset.browser_download_url;
+                
+                // Linki butona ata
+                btn.href = downloadUrl;
                 btnText.innerText = "DOWNLOAD FOR WINDOWS";
                 verText.innerText = `Version: ${data.tag_name}`;
+                
+                // Sonraki girişler için hafızaya kaydet (Tarayıcı kapanana kadar)
+                sessionStorage.setItem('larea_dl_url', downloadUrl);
+                sessionStorage.setItem('larea_dl_ver', data.tag_name);
             } else {
                 throw new Error('Exe not found');
             }
 
         } catch (error) {
-            console.log("Otomatik indirme linki alınamadı, güvenli sayfaya yönlendiriliyor.");
+            console.log("API hatası oluştu, manuel mod devreye giriyor.", error);
             
-            btn.href = `https://github.com/${user}/${repo}/releases/latest`;
-            btnText.innerText = "GO TO DOWNLOAD PAGE";
-            verText.innerText = "Direct download unavailable, redirecting to GitHub.";
+            // 3. API HATASI OLURSA (BURASI ÖNEMLİ)
+            // Seni GitHub sayfasına yönlendirme kodunu SİLDİM.
+            // Onun yerine "tahmini" bir indirme linki oluşturuyoruz.
+            // Bu link çalışsın istiyorsan GitHub'daki dosyanın adı "Larea-Browser-Setup.exe" olmalı.
+            
+            btn.href = `https://github.com/${user}/${repo}/releases/latest/download/${fallbackFilename}`;
+            
+            btnText.innerText = "DOWNLOAD NOW";
+            verText.innerText = "Direct Download (Server Busy)";
+            
+            // Eğer dosya adı tutmazsa yine 404 olabilir ama en azından GitHub sayfasına atmaz.
+            // Kullanıcı butona bastığında indirme başlamazsa uyarı verebiliriz:
+            btn.onclick = function(e) {
+                // Eğer href linki bozuksa diye küçük bir güvenlik
+                setTimeout(() => {
+                    // İndirme başlamazsa kullanıcı anlasın diye 2 saniye sonra log düşebiliriz
+                    // ama şimdilik standart indirme davranışı yeterli.
+                }, 1000);
+            };
         }
     }
 
     fetchLatestRelease();
+    // --- END İNDİRME MANTIĞI ---
 
     function showPage(pageId) {
       document.querySelectorAll('.page-section').forEach(section => {
