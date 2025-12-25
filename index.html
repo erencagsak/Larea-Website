@@ -418,9 +418,8 @@
 
   <div class="footer">© 2025 Larea Browser Project</div>
 
-  <script>
+<script>
     const track = document.getElementById('galleryTrack');
-    let scrollAmount = 0;
     
     setTimeout(() => {
         if(track) {
@@ -434,29 +433,31 @@
         const btn = document.getElementById('downloadBtn');
         const btnText = document.getElementById('btnText');
         const verText = document.getElementById('versionText');
+        const fallbackFileName = "Larea-Browser-Setup.exe"; 
 
         try {
             const response = await fetch(`https://api.github.com/repos/${user}/${repo}/releases/latest`);
             
-            if (!response.ok) throw new Error('Release not found');
+            if (!response.ok) throw new Error('API Error');
 
             const data = await response.json();
             const asset = data.assets.find(a => a.name.endsWith('.exe'));
 
             if (asset) {
                 btn.href = asset.browser_download_url;
-                btnText.innerText = "DOWNLOAD NOW";
-                verText.innerText = `For Windows 10/11 • ${data.tag_name}`;
+                btnText.innerText = "DOWNLOAD";
+                verText.innerText = `Version ${data.tag_name} • For Windows`;
             } else {
-                btnText.innerText = "GO TO RELEASES";
-                verText.innerText = `Latest: ${data.tag_name} (Manual Download)`;
+                throw new Error('Exe not found');
             }
 
         } catch (error) {
-            console.error("GitHub API Error:", error);
-            btn.href = `https://github.com/${user}/${repo}/releases/latest`;
-            btnText.innerText = "DOWNLOAD FROM GITHUB";
-            verText.innerText = "Could not fetch latest version info.";
+            console.log("API limit reached or error, switching to direct fallback.");
+            
+            btn.href = `https://github.com/${user}/${repo}/releases/latest/download/${fallbackFileName}`;
+            
+            btnText.innerText = "DOWNLOAD";
+            verText.innerText = "Ready for Windows 10/11";
         }
     }
 
